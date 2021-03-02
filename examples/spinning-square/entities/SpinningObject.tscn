@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=2]
+
+[ext_resource path="res://examples/spinning-square/entities/SpinningObject.gd" type="Script" id=1]
+
+
+[node name="SpinningObject" type="Polygon2D"]
+color = Color( 0, 0.713726, 0.768627, 1 )
+polygon = PoolVector2Array( -40, -40, 40, -40, 40, 40, -40, 40 )
+script = ExtResource( 1 )
