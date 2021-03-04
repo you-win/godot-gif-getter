@@ -52,6 +52,10 @@ var _render_threads: Array = []
 # Path to intended save location
 var _save_location: String = "user://result.gif"
 
+var _gif_handler: Reference = load("res://addons/godot-gif-getter/GifHandler.gdns").new()
+
+var _capture_thread: Thread = Thread.new()
+
 ###############################################################################
 # Builtin functions                                                           #
 ###############################################################################
@@ -65,44 +69,8 @@ func _ready() -> void:
 
 func _physics_process(_delta: float) -> void:
 	if _should_capture:
-		_frame_skip_counter += 1
-		if (_frame_skip_counter > _frame_skip and _current_frame <= _max_frames):
-			var image: Image = _viewport.get_texture().get_data()
-			image.convert(Image.FORMAT_RGBA8)
-			image.flip_y() # Images from the viewport are upside down
-			
-			_images.append(image)
-			
-			_frame_skip_counter = 0
-			_current_frame += 1
-		elif (_current_frame > _max_frames):
-			_should_capture = false
-			_current_frame = 1
-			control.visible = true
-			
-			# Single thread
-			# _render_thread.start(self, "_render_gif")
-			
-			# Multi thread
-			var data: Array = []
-			for i in range(_max_threads):
-				_render_threads.append(Thread.new())
-				data.append([])
-			
-			# Divide up image data
-			# Will need to reconstruct this order later
-			var c: int = 0
-			for image in _images:
-				data[c].append(image)
-				if c < _max_threads - 1:
-					c += 1
-				else:
-					c = 0
-			
-			for t in _render_threads.size():
-				_render_threads[t].start(self, "_write_frame_buffer_threaded", data[t])
-			
-			_render_thread.start(self, "_render_gif_threaded", _render_threads)
+		if not _capture_thread.is_active():
+			_capture_thread.start(self, "_capture_frames")
 
 ###############################################################################
 # Connections                                                                 #
@@ -181,6 +149,74 @@ func _on_popup_hide() -> void:
 # Private functions                                                           #
 ###############################################################################
 
+func _godot_single_thread() -> void:
+	_render_thread.start(self, "_render_gif")
+
+func _godot_multi_thread() -> void:
+	var data: Array = []
+	for i in range(_max_threads):
+		_render_threads.append(Thread.new())
+		data.append([])
+	
+	# Divide up image data
+	# Will need to reconstruct this order later
+	var c: int = 0
+	for image in _images:
+		data[c].append(image)
+		if c < _max_threads - 1:
+			c += 1
+		else:
+			c = 0
+
+	for t in _render_threads.size():
+		_render_threads[t].start(self, "_write_frame_buffer_threaded", data[t])
+
+	_render_thread.start(self, "_render_gif_threaded", _render_threads)
+
+func _rust_multi_thread() -> void:
+	var images_bytes: Array = []
+	for image in _images:
+		images_bytes.append(image.get_data())
+	_gif_handler.set_file_name(_save_location)
+	_gif_handler.write_frames(
+			images_bytes,
+			int(_viewport.size.x),
+			int(_viewport.size.y),
+			_max_threads,
+			_max_frames)
+
+func _rust_godot_multi_thread() -> void:
+	var images_bytes: Array = []
+	for image in _images:
+		images_bytes.append(image.get_data())
+	var unsorted_buffers: Array = _gif_handler.get_buffers(images_bytes, int(_viewport.size.x), int(_viewport.size.y), _max_threads)
+	_render_thread.start(self, "_render_gif_from_buffers", unsorted_buffers)
+
+func _capture_frames(_x) -> void:
+	while _should_capture:
+		_frame_skip_counter += 1
+		if (_frame_skip_counter > _frame_skip and _current_frame <= _max_frames):
+			var image: Image = _viewport.get_texture().get_data()
+			image.convert(Image.FORMAT_RGBA8)
+			image.flip_y() # Images from the viewport are upside down
+			
+			_images.append(image)
+			
+			_frame_skip_counter = 0
+			_current_frame += 1
+		elif (_current_frame > _max_frames):
+			_should_capture = false
+			_current_frame = 1
+			control.visible = true
+			
+			_rust_multi_thread()
+
+			_log_message("gif saved")
+
+			_images.clear()
+	
+	_capture_thread.call_deferred("wait_to_finish")
+
 func _render_gif(_x) -> void:
 	"""
 	_render_gif
@@ -223,6 +259,34 @@ func _render_gif_threaded(data: Array) -> void:
 	for i in range(_max_frames):
 		_log_message("Processing frame %s of %s" % [i + 1, _max_frames])
 		var buffer: PoolByteArray = buffer_data[c].pop_front()
+		if buffer:
+			reconstructed_buffer.append_array(buffer)
+		if c < data.size() - 1:
+			c += 1
+		else:
+			c = 0
+	
+	var file: File = File.new()
+	file.open(_save_location, File.WRITE)
+	
+	# Wait for the file to actually be open
+	while true:
+		if file.is_open():
+			break
+	
+	file.store_buffer(_gif_exporter.export_file_data_threaded(reconstructed_buffer))
+	file.close()
+	
+	_log_message("Gif saved")
+	
+	_render_thread.call_deferred("wait_to_finish")
+
+func _render_gif_from_buffers(data: Array) -> void:
+	var reconstructed_buffer: PoolByteArray = PoolByteArray()
+	var c: int = 0
+	for i in range(_max_frames):
+		_log_message("Processing frame %s of %s" % [i + 1, _max_frames])
+		var buffer: PoolByteArray = data[c].pop_front()
 		if buffer:
 			reconstructed_buffer.append_array(buffer)
 		if c < data.size() - 1:
