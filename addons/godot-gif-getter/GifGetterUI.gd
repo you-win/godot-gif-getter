@@ -11,6 +11,7 @@ onready var control: Control = $Control
 onready var capture_now_button: Button = $Control/Options/VBoxContainer/ButtonContainer/CaptureNowButton
 onready var capture_in_five_seconds_button: Button = $Control/Options/VBoxContainer/ButtonContainer/CaptureInFiveSecondsButton
 onready var save_location_line_edit: LineEdit = $Control/Options/VBoxContainer/SaveLocationContainer/LineEdit
+onready var render_quality_line_edit: LineEdit = $Control/Options/VBoxContainer/RenderQualityContainer/LineEdit
 onready var frames_line_edit: LineEdit = $Control/Options/VBoxContainer/FramesContainer/LineEdit
 onready var frame_skip_line_edit: LineEdit = $Control/Options/VBoxContainer/FrameSkipContainer/LineEdit
 onready var frame_delay_line_edit: LineEdit = $Control/Options/VBoxContainer/FrameDelayContainer/LineEdit
@@ -34,12 +35,14 @@ var _frame_skip: int = 3
 var _frame_skip_counter: int = 0
 
 # Delay between each frame in the gif
-var _gif_frame_delay: float = 0.1
+var _gif_frame_delay: int = 100
 
 # Total number of frames in the gif
 var _max_frames: int = 20
 # Count frames stored
 var _current_frame: int = 1
+
+var _render_quality: int = 10
 
 # Main coalescing thread
 var _render_thread: Thread = Thread.new()
@@ -72,6 +75,17 @@ func _physics_process(_delta: float) -> void:
 		if not _capture_thread.is_active():
 			_capture_thread.start(self, "_capture_frames")
 
+func _exit_tree() -> void:
+	for i in _render_threads:
+		if i.is_active():
+			i.wait_to_finish()
+	
+	if _render_thread.is_active():
+		_render_thread.wait_to_finish()
+
+	if _capture_thread.is_active():
+		_capture_thread.wait_to_finish()
+
 ###############################################################################
 # Connections                                                                 #
 ###############################################################################
@@ -82,20 +96,24 @@ func _on_capture_now() -> void:
 	if not dir.dir_exists(save_location_line_edit.text.get_base_dir()):
 		_log_message("Directory does not exist.", true)
 		return
+	if not render_quality_line_edit.text.is_valid_integer():
+		_log_message("Render quality input is not a valid integer.", true)
+		return
 	if not frames_line_edit.text.is_valid_integer():
 		_log_message("Frames input is not a valid integer.", true)
 		return
 	if not frame_skip_line_edit.text.is_valid_integer():
 		_log_message("Frame skip input is not a valid integer.", true)
 		return
-	if not frame_delay_line_edit.text.is_valid_float():
-		_log_message("Frame delay input is not a valid float.", true)
+	if not frame_delay_line_edit.text.is_valid_integer():
+		_log_message("Frame delay input is not a valid integer.", true)
 		return
 	if not threads_line_edit.text.is_valid_integer():
 		_log_message("Threads input is not a valid integer.", true)
 		return
 	
 	_save_location = save_location_line_edit.text
+	_render_quality = render_quality_line_edit.text.to_int()
 	_max_frames = frames_line_edit.text.to_int()
 	_frame_skip = frame_skip_line_edit.text.to_int()
 	_gif_frame_delay = frame_delay_line_edit.text.to_float()
@@ -103,6 +121,8 @@ func _on_capture_now() -> void:
 	
 	_should_capture = true
 	control.visible = false
+
+	yield(get_tree(), "physics_frame")
 
 func _on_capture_in_five_seconds() -> void:
 	yield(get_tree().create_timer(5.0), "timeout")
@@ -178,6 +198,9 @@ func _rust_multi_thread() -> void:
 	for image in _images:
 		images_bytes.append(image.get_data())
 	_gif_handler.set_file_name(_save_location)
+	_gif_handler.set_frame_delay(_gif_frame_delay)
+	_gif_handler.set_parent(self)
+	_gif_handler.set_render_quality(_render_quality)
 	_gif_handler.write_frames(
 			images_bytes,
 			int(_viewport.size.x),
@@ -185,6 +208,7 @@ func _rust_multi_thread() -> void:
 			_max_threads,
 			_max_frames)
 
+# TODO getting buffers from rust doesn't work
 func _rust_godot_multi_thread() -> void:
 	var images_bytes: Array = []
 	for image in _images:
@@ -193,9 +217,19 @@ func _rust_godot_multi_thread() -> void:
 	_render_thread.start(self, "_render_gif_from_buffers", unsorted_buffers)
 
 func _capture_frames(_x) -> void:
+	"""
+	_capture_frames
+	
+	Needs to be run on a background thread otherwise it blocks the main thread
+	when saving a viewport image.
+	
+	_max_frames has 1 added to it since the last frame will usually have the UI
+	visible in it. Instead of solving that problem, just remove the last frame.
+	"""
 	while _should_capture:
+		print(_current_frame)
 		_frame_skip_counter += 1
-		if (_frame_skip_counter > _frame_skip and _current_frame <= _max_frames):
+		if (_frame_skip_counter > _frame_skip and _current_frame <= _max_frames + 1):
 			var image: Image = _viewport.get_texture().get_data()
 			image.convert(Image.FORMAT_RGBA8)
 			image.flip_y() # Images from the viewport are upside down
@@ -204,18 +238,19 @@ func _capture_frames(_x) -> void:
 			
 			_frame_skip_counter = 0
 			_current_frame += 1
-		elif (_current_frame > _max_frames):
+		elif (_current_frame > _max_frames + 1):
 			_should_capture = false
 			_current_frame = 1
 			control.visible = true
+			_images.pop_back()
 			
 			_rust_multi_thread()
 
 			_log_message("gif saved")
 
 			_images.clear()
-	
-	_capture_thread.call_deferred("wait_to_finish")
+			
+			_capture_thread.call_deferred("wait_to_finish")
 
 func _render_gif(_x) -> void:
 	"""

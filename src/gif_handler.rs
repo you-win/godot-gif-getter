@@ -8,7 +8,11 @@ use gif::{Encoder, Frame, Repeat};
 #[inherit(Reference)]
 #[user_data(user_data::MutexData<GifHandler>)]
 pub struct GifHandler {
-    pub file_name: String,
+    file_name: String,
+    frame_delay: u16,
+    render_quality: i32,
+
+    parent: Variant,
 }
 
 #[methods]
@@ -16,16 +20,32 @@ impl GifHandler {
     fn new(_owner: &Reference) -> Self {
         GifHandler {
             file_name: "".to_owned(),
+            frame_delay: 10,
+            render_quality: 10,
+
+            parent: Variant::new(),
         }
     }
 
     #[export]
-    fn set_file_name(&mut self, _owner: &Reference, new_name: GodotString) {
-        self.file_name = new_name.to_string();
+    fn set_file_name(&mut self, _owner: &Reference, name: GodotString) {
+        self.file_name = name.to_string();
     }
 
     #[export]
-    fn write_frame(&self, _owner: &Reference, _image_data: ByteArray) {}
+    fn set_frame_delay(&mut self, _owner: &Reference, frame_delay: u16) {
+        self.frame_delay = frame_delay;
+    }
+
+    #[export]
+    fn set_render_quality(&mut self, _owner: &Reference, render_quality: i32) {
+        self.render_quality = render_quality;
+    }
+
+    #[export]
+    fn set_parent(&mut self, _owner: &Reference, parent: Variant) {
+        self.parent = parent;
+    }
 
     #[export]
     fn write_frames_single_threaded(
@@ -56,6 +76,11 @@ impl GifHandler {
         thread_count: u16,
         max_frames: u16,
     ) {
+        if self.file_name == "" || self.parent == Variant::new() {
+            godot_print!("Missing required fields. Did you remember to call set_file_name(...) and set_parent(...)?");
+            return;
+        }
+
         let mut threads = vec![];
         let mut separated_buffers = vec![];
         for _i in 0..thread_count {
@@ -75,13 +100,27 @@ impl GifHandler {
         for i in 0..thread_count {
             let index: usize = i.into();
             let buffers = separated_buffers[index].to_vec();
+            let parent = self.parent.clone();
+            let render_quality = self.render_quality.clone();
             threads.push(thread::spawn(move || {
+                let thread_name = (i + 1).to_string();
                 let mut result = vec![];
-                for buffer in buffers {
-                    godot_print!("processing frame");
+                for (buffer_index, buffer) in buffers.iter().enumerate() {
+                    log_message(
+                        parent.clone(),
+                        format!(
+                            "thread {name} processing frame {buffer_count}",
+                            name = thread_name,
+                            buffer_count = buffer_index + 1
+                        ),
+                    );
                     let mut bytes = buffer.to_byte_array();
-                    let frame =
-                        Frame::from_rgba_speed(width, height, bytes.write().as_mut_slice(), 10);
+                    let frame = Frame::from_rgba_speed(
+                        width,
+                        height,
+                        bytes.write().as_mut_slice(),
+                        render_quality,
+                    );
                     result.push(frame);
                 }
                 return result;
@@ -103,37 +142,6 @@ impl GifHandler {
                 Some(f) => reordered_result.push(f),
                 None => {}
             }
-        }
-
-        let mut image = File::create(&self.file_name).unwrap();
-        let mut encoder = Encoder::new(&mut image, width, height, &[]).unwrap();
-        encoder.set_repeat(Repeat::Infinite).unwrap();
-        for rr in reordered_result {
-            encoder.write_frame(&rr).unwrap();
-        }
-    }
-
-    // TODO does not work, returns buffer indices instead of actual buffer data
-    #[export]
-    fn get_buffers(
-        &self,
-        _owner: &Reference,
-        array_of_bytes: VariantArray,
-        width: u16,
-        height: u16,
-        thread_count: u16,
-    ) -> VariantArray {
-        let result = VariantArray::new();
-
-        let mut threads = vec![];
-        let mut separated_buffers = vec![];
-        for _i in 0..thread_count {
-            separated_buffers.push(vec![]);
-        }
-
-        let mut c = 0;
-        for bytes in array_of_bytes.iter() {
-            separated_buffers[c].push(bytes);
             if c < (thread_count - 1).into() {
                 c += 1;
             } else {
@@ -141,29 +149,20 @@ impl GifHandler {
             }
         }
 
-        for i in 0..thread_count {
-            let index: usize = i.into();
-            let buffers = separated_buffers[index].to_vec();
-            threads.push(thread::spawn(move || {
-                let result = VariantArray::new();
-                for buffer in buffers {
-                    godot_print!("processing frame");
-                    let mut bytes = buffer.to_byte_array();
-                    let frame =
-                        Frame::from_rgba_speed(width, height, bytes.write().as_mut_slice(), 10);
-                    let mut byte_array = ByteArray::new();
-                    byte_array.append_vec(&mut frame.buffer.to_vec());
-                    result.push(byte_array);
-                }
-                return result;
-            }));
+        let mut image = File::create(&self.file_name).unwrap();
+        let mut encoder = Encoder::new(&mut image, width, height, &[]).unwrap();
+        encoder.set_repeat(Repeat::Infinite).unwrap();
+        for (rr_i, rr) in reordered_result.iter().enumerate() {
+            log_message(
+                self.parent.clone(),
+                format!("Writing frame {frame_index}", frame_index = rr_i + 1),
+            );
+            encoder.write_frame(&rr).unwrap();
         }
-
-        for t in threads {
-            let thread_result = t.join().unwrap();
-            result.push(thread_result);
-        }
-
-        return result.into_shared();
     }
+}
+
+fn log_message(mut v: Variant, message: String) {
+    let variant_message = Variant::from_godot_string(&GodotString::from_str(message.to_string()));
+    v.call("_log_message", &[variant_message]).unwrap();
 }

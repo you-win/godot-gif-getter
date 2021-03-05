@@ -20,11 +20,11 @@ __meta__ = {
 }
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Control/Options"]
-margin_right = 287.0
-margin_bottom = 160.0
+margin_right = 346.0
+margin_bottom = 188.0
 
 [node name="ButtonContainer" type="HBoxContainer" parent="Control/Options/VBoxContainer"]
-margin_right = 287.0
+margin_right = 346.0
 margin_bottom = 20.0
 
 [node name="CaptureNowButton" type="Button" parent="Control/Options/VBoxContainer/ButtonContainer"]
@@ -40,7 +40,7 @@ text = "Capture in 5 seconds"
 
 [node name="SaveLocationContainer" type="HBoxContainer" parent="Control/Options/VBoxContainer"]
 margin_top = 24.0
-margin_right = 287.0
+margin_right = 346.0
 margin_bottom = 48.0
 
 [node name="Label" type="Label" parent="Control/Options/VBoxContainer/SaveLocationContainer"]
@@ -62,10 +62,27 @@ margin_right = 245.0
 margin_bottom = 24.0
 text = "Select path"
 
-[node name="FramesContainer" type="HBoxContainer" parent="Control/Options/VBoxContainer"]
+[node name="RenderQualityContainer" type="HBoxContainer" parent="Control/Options/VBoxContainer"]
 margin_top = 52.0
-margin_right = 287.0
+margin_right = 346.0
 margin_bottom = 76.0
+
+[node name="Label" type="Label" parent="Control/Options/VBoxContainer/RenderQualityContainer"]
+margin_top = 5.0
+margin_right = 281.0
+margin_bottom = 19.0
+text = "Render quality from 1 - 30 (1 is best quality)"
+
+[node name="LineEdit" type="LineEdit" parent="Control/Options/VBoxContainer/RenderQualityContainer"]
+margin_left = 285.0
+margin_right = 343.0
+margin_bottom = 24.0
+text = "10"
+
+[node name="FramesContainer" type="HBoxContainer" parent="Control/Options/VBoxContainer"]
+margin_top = 80.0
+margin_right = 346.0
+margin_bottom = 104.0
 
 [node name="Label" type="Label" parent="Control/Options/VBoxContainer/FramesContainer"]
 margin_top = 5.0
@@ -77,12 +94,12 @@ text = "Frames"
 margin_left = 51.0
 margin_right = 109.0
 margin_bottom = 24.0
-text = "20"
+text = "60"
 
 [node name="FrameSkipContainer" type="HBoxContainer" parent="Control/Options/VBoxContainer"]
-margin_top = 80.0
-margin_right = 287.0
-margin_bottom = 104.0
+margin_top = 108.0
+margin_right = 346.0
+margin_bottom = 132.0
 
 [node name="Label" type="Label" parent="Control/Options/VBoxContainer/FrameSkipContainer"]
 margin_top = 5.0
@@ -94,29 +111,29 @@ text = "Frame skip"
 margin_left = 74.0
 margin_right = 132.0
 margin_bottom = 24.0
-text = "3"
+text = "1"
 
 [node name="FrameDelayContainer" type="HBoxContainer" parent="Control/Options/VBoxContainer"]
-margin_top = 108.0
-margin_right = 287.0
-margin_bottom = 132.0
+margin_top = 136.0
+margin_right = 346.0
+margin_bottom = 160.0
 
 [node name="Label" type="Label" parent="Control/Options/VBoxContainer/FrameDelayContainer"]
 margin_top = 5.0
-margin_right = 78.0
+margin_right = 110.0
 margin_bottom = 19.0
-text = "Frame delay"
+text = "Frame delay (ms)"
 
 [node name="LineEdit" type="LineEdit" parent="Control/Options/VBoxContainer/FrameDelayContainer"]
-margin_left = 82.0
-margin_right = 140.0
+margin_left = 114.0
+margin_right = 172.0
 margin_bottom = 24.0
-text = "0.1"
+text = "100"
 
 [node name="ThreadsContainer" type="HBoxContainer" parent="Control/Options/VBoxContainer"]
-margin_top = 136.0
-margin_right = 287.0
-margin_bottom = 160.0
+margin_top = 164.0
+margin_right = 346.0
+margin_bottom = 188.0
 
 [node name="Label" type="Label" parent="Control/Options/VBoxContainer/ThreadsContainer"]
 margin_top = 5.0
