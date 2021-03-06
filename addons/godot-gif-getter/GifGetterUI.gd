@@ -1,5 +1,13 @@
 extends CanvasLayer
 
+"""
+GifGetterUI
+
+Single scene + script that can be dropped in and out of any scene.
+
+Most gif-related variables are set from the LineEdit values.
+"""
+
 const MAX_CONSOLE_MESSAGE_COUNT: int = 20
 
 onready var control: Control = $Control
@@ -12,6 +20,7 @@ onready var frames_line_edit: LineEdit = $Control/Options/VBoxContainer/FramesCo
 onready var frame_skip_line_edit: LineEdit = $Control/Options/VBoxContainer/FrameSkipContainer/LineEdit
 onready var frame_delay_line_edit: LineEdit = $Control/Options/VBoxContainer/FrameDelayContainer/LineEdit
 onready var threads_line_edit: LineEdit = $Control/Options/VBoxContainer/ThreadsContainer/LineEdit
+onready var hotkey_line_edit: LineEdit = $Control/Options/VBoxContainer/HotkeyContainer/LineEdit
 
 onready var console: VBoxContainer = $Control/Console/ScrollContainer/VBoxContainer
 
@@ -23,32 +32,31 @@ var _should_capture: bool = false
 var _images: Array = []
 
 # Delay between storing viewport texture data
-var _frame_skip: int = 3
+var _frame_skip: int
 # Count ticks between each frame skip
 var _frame_skip_counter: int = 0
-
 # Delay between each frame in the gif
-var _gif_frame_delay: int = 100
-
+var _gif_frame_delay: int
 # Total number of frames in the gif
-var _max_frames: int = 20
+var _max_frames: int
 # Count frames stored
 var _current_frame: int = 1
 
 # Rendering quality for gifs from 1 - 30. 1 is highest quality but slow
-var _render_quality: int = 10
+var _render_quality: int
 
 # Background thread for capturing screenshots
 var _capture_thread: Thread = Thread.new()
-
 # Number of render threads
-var _max_threads: int = 4
+var _max_threads: int
 
 # Path to intended save location. Uses Rust's fs library instead of Godot's
-var _save_location: String = "result.gif"
+var _save_location: String
 
 # Rust gif creation library
 var _gif_handler: Reference = load("res://addons/godot-gif-getter/GifHandler.gdns").new()
+
+var _hide_ui_action: String
 
 ###############################################################################
 # Builtin functions                                                           #
@@ -58,11 +66,17 @@ func _ready() -> void:
 	capture_now_button.connect("pressed", self, "_on_capture_now")
 	capture_in_five_seconds_button.connect("pressed", self, "_on_capture_in_five_seconds")
 	$Control/Options/VBoxContainer/SaveLocationContainer/Button.connect("pressed", self, "_on_select_path_button_pressed")
+	$Control/Options/VBoxContainer/HotkeyContainer/Button.connect("pressed", self, "_on_set_hotkey_button_pressed")
 
 func _physics_process(_delta: float) -> void:
 	if _should_capture:
 		if not _capture_thread.is_active():
 			_capture_thread.start(self, "_capture_frames")
+
+func _input(event: InputEvent) -> void:
+	if _hide_ui_action:
+		if (not _should_capture and event.is_action_pressed(_hide_ui_action)):
+			control.visible = not control.visible
 
 func _exit_tree() -> void:
 	if _capture_thread.is_active():
@@ -146,6 +160,17 @@ func _on_popup_hide() -> void:
 	var fd: FileDialog = get_node_or_null("fd")
 	if fd:
 		fd.queue_free()
+
+func _on_set_hotkey_button_pressed() -> void:
+	if hotkey_line_edit.text:
+		if InputMap.has_action(hotkey_line_edit.text):
+			_hide_ui_action = hotkey_line_edit.text
+			_log_message("Hide UI action set to %s ." % _hide_ui_action)
+		else:
+			_log_message("Action not configured in your project.", true)
+	else:
+		_hide_ui_action = ""
+		_log_message("Hide UI action unset.")
 
 ###############################################################################
 # Private functions                                                           #
