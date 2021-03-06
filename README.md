@@ -16,11 +16,16 @@ Used to make use of [godot-gdgifexporter](https://github.com/jegor377/godot-gdgi
 Inspired by [this reddit thread](https://www.reddit.com/r/godot/comments/lv7pon/not_for_a_game_but_i_made_a_short_animation_using/).
 
 
-
 ## Quickstart
 Add `addons/godot-gif-getter/GifGetterUI.tscn` to your scene. Click on the 'Capture now' button in the top left corner. Wait for the gif to be processed and saved.
 
 The UI is automatically hidden when recording frames.
+
+## Limitations
+If you are using transparent backgrounds in your project, gifs will not capture correctly.
+![](demo-result-bad.gif)
+
+It's still kinda cool but probably not expected.
 
 ## License
 See [LICENSE](LICENSE).
