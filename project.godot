@@ -8,28 +8,17 @@
 
 config_version=4
 
-_global_script_classes=[ {
-"base": "Reference",
-"class": "GifExporter",
-"language": "GDScript",
-"path": "res://addons/gdgifexporter/gifexporter.gd"
-}, {
-"base": "Reference",
-"class": "MedianCut",
-"language": "GDScript",
-"path": "res://addons/gdgifexporter/quantization/median_cut.gd"
-} ]
+_global_script_classes=[  ]
 _global_script_class_icons={
-"GifExporter": "",
-"MedianCut": ""
+
 }
 
 [application]
 
 config/name="Godot Gif Getter"
 run/main_scene="res://examples/spinning-square/screens/TestScreen.tscn"
-config/icon="res://examples/spinning-square/assets/icon.png"
+config/icon="res://icon.png"
 
 [rendering]
 
-environment/default_environment="res://examples/spinning-square/assets/default_env.tres"
+environment/default_environment="res://default_env.tres"
