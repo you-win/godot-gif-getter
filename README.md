@@ -1,7 +1,7 @@
 # Godot Gif Getter
 An ingame utility for recording and saving gifs for Godot.
 
-Requires very little configuration to actually use. Just drop the scene into your project and the default settings should be good enough.
+Requires very little configuration to actually use. Just drop the scene into your project and the default settings should be good enough. The frame rate, save location, capture frequency, threads, and ui toggle hotkey can all be configured in the UI. 
 
 Uses the [image-gif](https://github.com/image-rs/image-gif) Rust library for encoding gifs.
 
@@ -11,7 +11,7 @@ It's pretty fast. The below gif of a gif capture shows the program using 4 threa
 The resulting gif.
 ![](demo-result.gif)
 
-Used to mae use of [godot-gdgifexporter](https://github.com/jegor377/godot-gdgifexporter) for gif creation. That was too slow for longer gifs.
+Used to make use of [godot-gdgifexporter](https://github.com/jegor377/godot-gdgifexporter) for gif creation. That was too slow for longer gifs.
 
 Inspired by [this reddit thread](https://www.reddit.com/r/godot/comments/lv7pon/not_for_a_game_but_i_made_a_short_animation_using/).
 
@@ -21,3 +21,6 @@ Inspired by [this reddit thread](https://www.reddit.com/r/godot/comments/lv7pon/
 Add `addons/godot-gif-getter/GifGetterUI.tscn` to your scene. Click on the 'Capture now' button in the top left corner. Wait for the gif to be processed and saved.
 
 The UI is automatically hidden when recording frames.
+
+## License
+See [LICENSE](LICENSE).
