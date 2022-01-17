@@ -22,10 +22,17 @@ Add `addons/godot-gif-getter/GifGetterUI.tscn` to your scene. Click on the 'Capt
 The UI is automatically hidden when recording frames.
 
 ## Limitations
-If you are using transparent backgrounds in your project, gifs will not capture correctly.
+- If you are using transparent backgrounds in your project, gifs will not capture correctly. It's still kinda cool but probably not expected.
+
 ![](demo-result-bad.gif)
 
-It's still kinda cool but probably not expected.
+- Cross-compilation is not supported. You can currently build on windows and mac.
+    - Mac built for version: `Big Sur 11.5.2`
+
+## Building
+- Install [rust](https://www.rust-lang.org/tools/install)
+- Run `${REPO_ROOT}/build-and-move-dll.sh`
+- Copy or soft symlink `${REPO_ROOT}/addons/godot-gif-getter` to `${YOUR_PROJECT_ROOT}/addons/godot-gif-getter`
 
 ## License
 See [LICENSE](LICENSE).

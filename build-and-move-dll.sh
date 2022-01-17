@@ -1,21 +1,29 @@
 #!/bin/bash
+set -euo pipefail
 
-set -e
+declare -r SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-echo "moving into rust directory"
+declare -r BASE_LIBRARY_NAME="godot_gif_getter"
+declare -r WIN_LIBRARY_NAME="${BASE_LIBRARY_NAME}.dll"
+declare -r OSX_LIBRARY_NAME="lib${BASE_LIBRARY_NAME}.dylib"
 
-cd rust
+case "$(uname -s)" in
+  Darwin)
+    LIBRARY_NAME="${OSX_LIBRARY_NAME}"
+    ;;
+  CYGWIN*|MINGW32*|MSYS*|MINGW*)
+    LIBRARY_NAME="${WIN_LIBRARY_NAME}"
+    ;;
+  *)
+    echo "ERROR: OS Not Supported"
+    exit 1
+    ;;
+esac
 
-echo "building rust code"
+echo -e "Building Rust code..."
+cargo build --release --manifest-path "${SCRIPT_DIR}"/rust/Cargo.toml
 
-cargo build --release
+echo -e "\nCopying DLL into addon directory..."
+cp -v "${SCRIPT_DIR}"/rust/target/release/"${LIBRARY_NAME}" "${SCRIPT_DIR}"/addons/godot-gif-getter/"${LIBRARY_NAME}"
 
-echo "moving into project base directory"
-
-cd ..
-
-echo "copying dll"
-
-cp rust/target/release/godot_gif_getter.dll addons/godot-gif-getter/godot_gif_getter.dll
-
-echo "finished"
+echo -e "\nFinished!"
