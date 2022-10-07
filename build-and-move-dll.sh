@@ -6,6 +6,7 @@ declare -r SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/nul
 declare -r BASE_LIBRARY_NAME="godot_gif_getter"
 declare -r WIN_LIBRARY_NAME="${BASE_LIBRARY_NAME}.dll"
 declare -r OSX_LIBRARY_NAME="lib${BASE_LIBRARY_NAME}.dylib"
+declare -r LIN_LIBRARY_NAME="lib${BASE_LIBRARY_NAME}.so"
 
 case "$(uname -s)" in
   Darwin)
@@ -13,6 +14,9 @@ case "$(uname -s)" in
     ;;
   CYGWIN*|MINGW32*|MSYS*|MINGW*)
     LIBRARY_NAME="${WIN_LIBRARY_NAME}"
+    ;;
+  Linux)
+    LIBRARY_NAME="${LIN_LIBRARY_NAME}"
     ;;
   *)
     echo "ERROR: OS Not Supported"

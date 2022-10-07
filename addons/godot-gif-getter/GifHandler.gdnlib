@@ -9,8 +9,10 @@ reloadable=true
 
 OSX.64="res://addons/godot-gif-getter/libgodot_gif_getter.dylib"
 Windows.64="res://addons/godot-gif-getter/godot_gif_getter.dll"
+X11.64 = "res://addons/godot-gif-getter/libgodot_gif_getter.so"
 
 [dependencies]
 
 OSX.64=[  ]
 Windows.64=[  ]
+X11.64=[  ]
