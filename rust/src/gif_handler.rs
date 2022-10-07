@@ -61,7 +61,8 @@ impl GifHandler {
         for image in array_of_bytes.iter() {
             godot_print!("processed frame");
             let mut bytes = image.to_byte_array();
-            let frame = Frame::from_rgba_speed(width, height, bytes.write().as_mut_slice(), 10);
+            let mut frame = Frame::from_rgba_speed(width, height, bytes.write().as_mut_slice(), self.render_quality);
+            frame.delay = self.frame_delay;
             encoder.write_frame(&frame).unwrap();
         }
     }
