@@ -61,7 +61,8 @@ impl GifHandler {
         for image in array_of_bytes.iter() {
             godot_print!("processed frame");
             let mut bytes = image.to_byte_array();
-            let frame = Frame::from_rgba_speed(width, height, bytes.write().as_mut_slice(), 10);
+            let mut frame = Frame::from_rgba_speed(width, height, bytes.write().as_mut_slice(), self.render_quality);
+            frame.delay = self.frame_delay;
             encoder.write_frame(&frame).unwrap();
         }
     }
@@ -102,6 +103,7 @@ impl GifHandler {
             let buffers = separated_buffers[index].to_vec();
             let parent = self.parent.clone();
             let render_quality = self.render_quality.clone();
+            let frame_delay = self.frame_delay;
             threads.push(thread::spawn(move || {
                 let thread_name = (i + 1).to_string();
                 let mut result = vec![];
@@ -115,12 +117,13 @@ impl GifHandler {
                         ),
                     );
                     let mut bytes = buffer.to_byte_array();
-                    let frame = Frame::from_rgba_speed(
+                    let mut frame = Frame::from_rgba_speed(
                         width,
                         height,
                         bytes.write().as_mut_slice(),
                         render_quality,
                     );
+                    frame.delay = frame_delay / 10; // in units of 10ms
                     result.push(frame);
                 }
                 return result;
